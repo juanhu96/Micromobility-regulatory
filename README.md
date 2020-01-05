@@ -1,1 +1,1 @@
-personal file
+Code file for the Passport project (private)
