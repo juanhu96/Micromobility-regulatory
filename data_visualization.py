@@ -12,16 +12,36 @@ def main():
     os.chdir("/Users/ArcticPirates/Desktop/Passport Project/Code")
     converted_data = pd.read_csv('~/Desktop/Passport Project/Data/converted_data.csv')
     print("Dataset imported. Original dataset size:", converted_data.shape)
+
+    converted_data['start_time_hour'] = pd.to_datetime(converted_data['start_time'], format = '%H:%M:%S').dt.hour
     converted_data['start_time'] = pd.to_datetime(converted_data['start_time'], format = '%H:%M:%S').dt.time
     converted_data['end_time'] = pd.to_datetime(converted_data['end_time'], format = '%H:%M:%S').dt.time
     
+    filtered_data = filter_data(converted_data, 'trip')
+    # filtered_data = filter_data(converted_data, 'rebalance')
+    print("Data filtered, the size is now:", filtered_data.shape)
     print("Start plotting the data...")
+    event_boxplot(filtered_data)
     # grid_scatterplot(converted_data, event = 'trip', plot_type = 'hours')
     # grid_scatterplot(converted_data, event = 'rebalance', plot_type = 'hours')
     # grid_histogram(converted_data, event = 'trip', plot_type = 'trip')
     # grid_histogram(converted_data, event = 'rebalance', plot_type = 'trip')
-
     print("Finished plotting the data.")
+
+
+def filter_data(data, event, min_time = 1, min_dist = 0):
+    """
+    Filter the data by dropping events by specification
+
+    event: the event type to be dropped
+    min time, min dist
+    NOTE: 
+    Do we have to drop the ones that are too large?
+    What if the scooters are returned at the exact same place?
+    """
+
+    filtered_data = data.drop(data[(data['event'] == event) & ((data['duration'] < min_time) | (data['line_dist'] < min_dist))].index)
+    return filtered_data
 
 
 def grid_scatterplot(data, event, plot_type, unique = False, rotate = False):
@@ -93,8 +113,8 @@ def grid_histogram(data, event, plot_type, unique = False, rotate = False):
     2D histogram of counts of trips/scooter with grids
     
     event: 'trip' or 'rebalance'
-    plot_type: 'hours' or 'days' TODO: change to trips vs. scooters
-    unique: 'True' or 'False', whether to count unique scooters or all trips
+    plot_type: 'hours' or 'days'
+    TODO: unique: 'True' or 'False', whether to count unique scooters or all trips
     rotate: 'True' or 'False', whether to rotate the coordinates for plot, set to 'False' as default
     """
 
@@ -137,14 +157,79 @@ def grid_histogram(data, event, plot_type, unique = False, rotate = False):
         plt.cla()
 
 
-def event_boxplot(data, event):
+def event_boxplot(data, event = 'trip'):
     """
-    boxplot for the average time/distance of the event
+    Boxplot for the average time/distance of the event group by the time
+    NOTE: For first time handling dataset, call count_avg() for data transformation
+
+    event: 'trip' or 'rebalance'
     """
     
-    event_data = data[data['event'] == event]
+    # event_data = data[data['event'] == event]
+    # avg_data = count_avg(event_data)
+    avg_data = pd.read_csv('~/Desktop/Passport Project/Data/scooter_count_data.csv')
 
-    pass
+    fig, ax = plt.subplots(figsize=(20, 20))
+
+    sns.boxplot(x = 'Time_period', y = 'Trips', palette = 'Set1', data = avg_data)
+    plt.title('Trips for each scooter over 24hrs', fontdict = {'fontsize' : 30})
+    plt.savefig(f'../Figs/average_scooter_boxplot/scooter_count_boxplot_total.png')
+    plt.cla()
+
+    sns.boxplot(x = 'Time_period', y = 'Average_duration', palette = 'Set1', data = avg_data)
+    plt.title('Average time for each scooter over 24hrs', fontdict = {'fontsize' : 30})
+    plt.savefig(f'../Figs/average_scooter_boxplot/scooter_avg_duration_boxplot_total.png')
+    plt.cla()
+
+    sns.boxplot(x = 'Time_period', y = 'Average_line_dist', palette = 'Set1', data = avg_data)
+    plt.title('Average straight line distance for each scooter over 24hrs', fontdict = {'fontsize' : 30})
+    plt.savefig(f'../Figs/average_scooter_boxplot/scooter_avg_line_dist_boxplot_total.png')
+    plt.cla()
+
+    sns.boxplot(x = 'Time_period', y = 'Trips', hue = "Zone_number", palette = 'Set1', data = avg_data)
+    plt.title('Trips for each scooter over 24hrs (by zone)', fontdict = {'fontsize' : 30})
+    plt.savefig(f'../Figs/average_scooter_boxplot/scooter_count_boxplot_by_zone.png')
+    plt.cla()
+
+    sns.boxplot(x = 'Time_period', y = 'Average_duration', hue = "Zone_number", palette = 'Set1', data = avg_data)
+    plt.title('Average time for each scooter over 24hrs (by zone)', fontdict = {'fontsize' : 30})
+    plt.savefig(f'../Figs/average_scooter_boxplot/scooter_avg_duration_boxplot_by_zone.png')
+    plt.cla()
+
+    sns.boxplot(x = 'Time_period', y = 'Average_line_dist', hue = "Zone_number", palette = 'Set1', data = avg_data)
+    plt.title('Average straight line distance for each scooter over 24hrs (by zone)', fontdict = {'fontsize' : 30})
+    plt.savefig(f'../Figs/average_scooter_boxplot/scooter_avg_line_dist_boxplot_by_zone.png')
+    plt.cla()
+
+
+def count_avg(event_data):
+
+    """
+    Create a new dataframe that stores the information for each scooter in each period
+
+    Time period, Total trips, Average duration, Average straight line distance, Provider, Zone
+    """
+
+    count_data_list = []
+    for i in range(24):
+        df = event_data[event_data['start_time_hour'] == i]
+        # scooters used in that area, for each of them compute how many trips they served
+        for scooter in df['Scooter_ID'].unique():
+            trips = len(df[df['Scooter_ID'] == scooter])
+            provider = df[df['Scooter_ID'] == scooter].iloc[0]['Mobility_Provider']
+            zone = df[df['Scooter_ID'] == scooter].iloc[0]['start_zone']
+            avg_duration = df[df['Scooter_ID'] == scooter]['duration'].mean()
+            avg_line_dist = df[df['Scooter_ID'] == scooter]['line_dist'].mean()
+            scooter_event = {"Scooter_ID": scooter, "Time_period": i, "Trips": trips, \
+                "Average_duration": avg_duration, "Average_line_dist": avg_line_dist,\
+                    "Mobility_Provider": provider, "Zone_number": zone}
+            count_data_list.append(scooter_event)
+    count_data = pd.DataFrame(count_data_list)
+    count_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'scooter_count_data.csv', encoding='utf-8', index=False, header = True, \
+        columns = ["Scooter_ID", "Time_period", "Trips", "Average_duration", "Average_line_dist", "Mobility_Provider", "Zone_number"])
+    print("File saved as scooter_count_data.csv")
+    return count_data
+
 
 def append_dummy(selected_data, whole_data, UTM_x_min, UTM_x_max, UTM_y_min, UTM_y_max):
 
