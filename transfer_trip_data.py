@@ -6,14 +6,9 @@ import matplotlib.pyplot as plt
 import utils
 
 def main():
-    # Set up working directory
     os.chdir("/Users/ArcticPirates/Desktop/Passport Project/Code")
-
-    # Import dataset as csv
-    scooter_data = pd.read_csv('~/Desktop/Passport Project/Code/scooter_data.csv')
+    scooter_data = pd.read_csv('~/Desktop/Passport Project/Data/scooter_data.csv')
     print("Original dataset imported, size:", scooter_data.shape)
-
-    # Data preprocessing (for starting/ending time)
     scooter_data['start_time'] = pd.to_datetime(scooter_data['start_time'], format = '%H:%M:%S').dt.time
     scooter_data['end_time'] = pd.to_datetime(scooter_data['end_time'], format = '%H:%M:%S').dt.time
     # scooter_data = scooter_data[(scooter_data['start_time'] >= dt.time(6,00,00)) & (scooter_data['start_time'] <= dt.time(21,00,00))]
@@ -26,14 +21,18 @@ def main():
 
     
 def convert_data(scooter_data):
+
     print("Start converting the data...")
     event_data_list = []
+    
     for index, row in scooter_data.iterrows():
+        
         """
         - consider the normal events only for now
         - ignore the first event
         - look for the same scooter
         """
+        
         if (row['event_type_reason'] == 'trip_end' or row['event_type_reason'] == 'low_battery' or \
             row['event_type_reason'] == 'service_start' or row['event_type_reason'] == 'rebalance_drop_off' or \
                 row['event_type_reason'] == 'maintenance_drop_off') and \
@@ -44,10 +43,24 @@ def convert_data(scooter_data):
             elif row['event_type_reason'] == 'low_battery':
                 event_type = 'low_battery'
             else:
-                event_type = 'rebalance/maintenance'
+                event_type = 'rebalance'
+
+            """
+            NOTE:
+            For zone/provider we convert to string to make it categorical
+
+            This works even if the start and end time are not on the same day
+            event_end_time = dt.time(0,10,00)
+            event_start_time = dt.time(23,50,00)
+
+            Straight line distance rounded as integers
+            Later on we will add the route distance
+
+            Creating a dictionary first is faster than appending to a data frame row by row directly
+            """
 
             previous_event = scooter_data.iloc[[index - 1]]
-            # NOTE: for zone/provider we convert to string to make it categorical
+
             event_start_day = previous_event['End_Day'].values[0]
             event_start_time = previous_event['end_time'].values[0]
             event_start_zone = str(previous_event['zone_number'].values[0])
@@ -63,19 +76,13 @@ def convert_data(scooter_data):
             event_end_UTM_y = row['UTM_y']
             event_end_lat = row['latitude']
             event_end_long = row['longitude']
-            
-            # NOTE: this works even if the start and end time are not on the same day
-            # event_end_time = dt.time(0,10,00)
-            # event_start_time = dt.time(23,50,00)
+
             event_duration = round((datetime.combine(date.min, event_end_time) - \
                  datetime.combine(date.min, event_start_time)).seconds/60, 2)
-            # distance rounded as integers
             line_dist = utils.distance_cartesian(event_start_UTM_x, event_start_UTM_y, event_end_UTM_x, event_end_UTM_y)
             provider = str(row['Mobility_Provider'])
             scooter_id = row['Scooter_ID']
 
-            # same format as park data
-            # NOTE: later on we will add the route distance
             event = {"start_time": event_start_time, "end_time": event_end_time, \
                 "Start_Day": event_start_day, "End_Day": event_end_day, \
                     "start_zone": event_start_zone, "end_zone": event_end_zone, \
@@ -89,9 +96,8 @@ def convert_data(scooter_data):
             event_data_list.append(event)
         
     print("All events converted.")
-    # NOTE: This is way faster than appending to a data frame row by row directly
     event_data = pd.DataFrame(event_data_list)
-    event_data.to_csv('converted_data.csv', encoding='utf-8', index=False, header = True, \
+    event_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'converted_data.csv', encoding='utf-8', index=False, header = True, \
         columns = ["start_time", "end_time", "Start_Day", "End_Day", "start_zone", "end_zone", \
         "start_UTM_x", "start_UTM_y", "end_UTM_x", "end_UTM_y", "start_lat", "start_long", "end_lat", \
             "end_long", "line_dist", "duration", "Mobility_Provider", "Scooter_ID", "event"])
@@ -101,7 +107,7 @@ def convert_data(scooter_data):
 
 def filter_data(event_data):
     """
-    For trip/low battery/rebalance events:
+    TODO: For trip/low battery/rebalance events:
     - drop trips w/ duration < 1min or > ?hr
     - drop the ones w/ straight line distance < ?m
     """

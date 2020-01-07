@@ -8,7 +8,7 @@ def main():
     os.chdir("/Users/ArcticPirates/Desktop/Passport Project/Code")
     
     # Import dataset as csv
-    scooter_data = pd.read_csv('~/Desktop/Passport Project/Charlotte_Pilot_3PreMonths_SafeData_Sorted.csv')
+    scooter_data = pd.read_csv('~/Desktop/Passport Project/Data/Charlotte_Pilot_3PreMonths_SafeData_Sorted.csv')
     print("Original dataset size:", scooter_data.shape)
     
     # Drop the uncategorized zone
