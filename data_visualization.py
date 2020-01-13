@@ -1,3 +1,8 @@
+"""
+Created on Jan, 2020
+@author: Jingyuan Hu
+"""
+
 import os
 import pandas as pd
 import datetime as dt
@@ -13,35 +18,21 @@ def main():
     converted_data = pd.read_csv('~/Desktop/Passport Project/Data/converted_data.csv')
     print("Dataset imported. Original dataset size:", converted_data.shape)
 
-    converted_data['start_time_hour'] = pd.to_datetime(converted_data['start_time'], format = '%H:%M:%S').dt.hour
+    # converted_data['start_time_hour'] = pd.to_datetime(converted_data['start_time'], format = '%H:%M:%S').dt.hour
     converted_data['start_time'] = pd.to_datetime(converted_data['start_time'], format = '%H:%M:%S').dt.time
     converted_data['end_time'] = pd.to_datetime(converted_data['end_time'], format = '%H:%M:%S').dt.time
     
-    filtered_data = filter_data(converted_data, 'trip')
+    # filtered_data = filter_data(converted_data, 'trip')
     # filtered_data = filter_data(converted_data, 'rebalance')
-    print("Data filtered, the size is now:", filtered_data.shape)
+    # print("Data filtered, the size is now:", filtered_data.shape)
     print("Start plotting the data...")
-    event_boxplot(filtered_data)
-    # grid_scatterplot(converted_data, event = 'trip', plot_type = 'hours')
-    # grid_scatterplot(converted_data, event = 'rebalance', plot_type = 'hours')
-    # grid_histogram(converted_data, event = 'trip', plot_type = 'trip')
-    # grid_histogram(converted_data, event = 'rebalance', plot_type = 'trip')
+    # event_boxplot(filtered_data)
+    # grid_scatterplot(filtered_data, event = 'trip', plot_type = 'hours')
+    grid_scatterplot(filtered_data, event = 'trip', plot_type = 'days')
+    # grid_scatterplot(filtered_data, event = 'rebalance', plot_type = 'hours')
+    # grid_histogram(filtered_data, event = 'trip', plot_type = 'trip')
+    # grid_histogram(filtered_data, event = 'rebalance', plot_type = 'trip')
     print("Finished plotting the data.")
-
-
-def filter_data(data, event, min_time = 1, min_dist = 0):
-    """
-    Filter the data by dropping events by specification
-
-    event: the event type to be dropped
-    min time, min dist
-    NOTE: 
-    Do we have to drop the ones that are too large?
-    What if the scooters are returned at the exact same place?
-    """
-
-    filtered_data = data.drop(data[(data['event'] == event) & ((data['duration'] < min_time) | (data['line_dist'] < min_dist))].index)
-    return filtered_data
 
 
 def grid_scatterplot(data, event, plot_type, unique = False, rotate = False):
@@ -85,22 +76,23 @@ def grid_scatterplot(data, event, plot_type, unique = False, rotate = False):
             plt.cla()
     
     elif plot_type == 'days':
-        for i in range(1, 11): # days
+        fig, ax = plt.subplots(figsize=(20, 20))
+        for i in range(1, 31): # days
             df = event_data[event_data['Start_Day'] == i]
-            fig, ax = plt.subplots(figsize=(20, 20))
-            for j in range(3): # hours
-                dff = df[(df['start_time'] >= dt.time(j,00,00)) & (df['start_time'] <= dt.time(j,59,59))]
+            for j in range(1): # hours
+                dff = df[(df['start_time'] >= dt.time(8+j,00,00)) & (df['start_time'] <= dt.time(10+j,59,59))]
                 dff = append_dummy(dff, data, UTM_x_min, UTM_x_max, UTM_y_min, UTM_y_max)
-                plt.rcParams['savefig.dpi'] = 200
-                plt.rcParams['figure.dpi'] = 200
-                sns.scatterplot(x = "start_UTM_x", y = "start_UTM_y", data = df, hue = 'start_zone', style = 'Mobility_Provider', \
-                    size = 100, legend = 'brief')
+                # plt.rcParams['savefig.dpi'] = 200
+                # plt.rcParams['figure.dpi'] = 200
+                sns.scatterplot(x = "start_UTM_x", y = "start_UTM_y", data = dff, hue = 'start_zone', style = 'Mobility_Provider', \
+                    size = 100, legend = 'full')
                 plt.axis([UTM_x_min, UTM_x_max, UTM_y_min, UTM_y_max], 'equal')
                 plt.xticks(np.arange(UTM_x_min, UTM_x_max, 200), rotation = 90)
                 plt.yticks(np.arange(UTM_y_min, UTM_y_max, 200))
                 plt.grid(linestyle = '-')
-                plt.title(event + ' between ' + str(j) + ' and ' + str(j+1) + ' at day ' + str(i), fontdict = {'fontsize' : 40})
-                plt.savefig(f'../Figs/{event}_hour_{j}_day_{i}.png', dpi = 200)
+                plt.title(event + ' between hour ' + str(8+j) + ' and hour ' + str(10+j) + ' at day ' + str(i), fontdict = {'fontsize' : 40})
+                # plt.savefig(f'../Figs/trip_plots_over_days/{event}_between_{9+j}_{10+j}_day_{i}.png', dpi = 200)
+                plt.savefig(f'../Figs/trip_between_8_10_over_days/{event}_between_{8+j}_{10+j}_day_{i}.png')
                 plt.cla()
 
     else:
@@ -132,13 +124,17 @@ def grid_histogram(data, event, plot_type, unique = False, rotate = False):
         y_edges = np.arange(UTM_y_min, UTM_y_max, 200)
         H, x_edges, y_edges = np.histogram2d(x = df['start_UTM_x'].tolist(), \
             y = df['start_UTM_y'].tolist(), bins = (x_edges, y_edges))
-        H = H.T # Let each row list bins with common y range
+        H = H.T 
 
         """
-        NOTE: 
+        NOTE:
+        H is a ndarray of shape(nx, ny), we transpose it to let 
+        each row list bins with common y range
+        TODO: count the unique scooters in each grids (how to compute this without manually for loop)
+
         Another way is to use pcolormesh to display actual edges
         X, Y = np.meshgrid(x_edges, y_edges)
-        #ax.pcolormesh(X,Y,H, cmap='RdBu')
+        ax.pcolormesh(X,Y,H, cmap='RdBu')
         """
 
         plt.rcParams['savefig.dpi'] = 200
@@ -201,6 +197,9 @@ def event_boxplot(data, event = 'trip'):
     plt.savefig(f'../Figs/average_scooter_boxplot/scooter_avg_line_dist_boxplot_by_zone.png')
     plt.cla()
 
+    
+
+
 
 def count_avg(event_data):
 
@@ -235,6 +234,7 @@ def append_dummy(selected_data, whole_data, UTM_x_min, UTM_x_max, UTM_y_min, UTM
 
     """
     Add 3 x 4 dummy data points to correct the legend (tentative solution)
+    TODO: add to the boundary instead of the central
     """
     
     dummy_list = []
