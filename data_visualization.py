@@ -15,26 +15,14 @@ import utils
 
 def main():
     os.chdir("/Users/ArcticPirates/Desktop/Passport Project/Code")
-    converted_data = pd.read_csv('~/Desktop/Passport Project/Data/converted_data.csv')
-    print("Dataset imported. Original dataset size:", converted_data.shape)
 
-    # converted_data['start_time_hour'] = pd.to_datetime(converted_data['start_time'], format = '%H:%M:%S').dt.hour
-    converted_data['start_time'] = pd.to_datetime(converted_data['start_time'], format = '%H:%M:%S').dt.time
-    converted_data['end_time'] = pd.to_datetime(converted_data['end_time'], format = '%H:%M:%S').dt.time
-    
-    # filtered_data = filter_data(converted_data, 'trip')
-    # filtered_data = filter_data(converted_data, 'rebalance')
-    # print("Data filtered, the size is now:", filtered_data.shape)
-    print("Start plotting the data...")
     filtered_data = pd.read_csv('~/Desktop/Passport Project/Data/filtered_data.csv')
-    trip_rebalance_over_day = pd.read_csv('~/Desktop/Passport Project/Data/trip_rebalance_by_area_over_days.csv')
+    trip_rebalance_total_over_days = pd.read_csv('~/Desktop/Passport Project/Data/trip_rebalance_total_over_days.csv')
+    trip_rebalance_by_zone_over_days = pd.read_csv('~/Desktop/Passport Project/Data/trip_rebalance_by_zone_over_days.csv')
     inventory_by_hour = pd.read_csv('~/Desktop/Passport Project/Data/inventory_by_hour.csv')
 
-    # for event in trip_rebalance_over_day['event'].unique():
-    #     for day_type in trip_rebalance_over_day['Day_type'].unique():
-    #         trip_rebalance_boxplot_over_days(trip_rebalance_over_day, event, day_type)
+    print("Dataset imported. Start plotting the data...")
 
-    # inventory_boxplot_over_days(inventory_by_hour)
     # scooter_unique_boxplot(filtered_data)
     # grid_scatterplot(filtered_data, event = 'trip', plot_type = 'hours')
     # grid_scatterplot(filtered_data, event = 'trip', plot_type = 'days')
@@ -43,8 +31,49 @@ def main():
     # for event_type in filtered_data['event'].unique():
     #     grid_histogram(filtered_data, event = event_type)
 
-    event_data = filtered_data[filtered_data['event'] == 'trip']
-    avg_data = count_avg(event_data)
+    # event_data = filtered_data[filtered_data['event'] == 'trip']
+    # avg_data = count_avg(event_data)
+
+    # for event in trip_rebalance_total_over_days['event'].unique():
+    #     for day_type in trip_rebalance_total_over_days['Day_type'].unique():
+    #         trip_rebalance_boxplot_over_hours(trip_rebalance_total_over_days, event, day_type)
+    #         trip_rebalance_lineplot_over_days(trip_rebalance_total_over_days, event, day_type)
+
+    # for day_type in inventory_by_hour['Day_type'].unique():
+    #     inventory_boxplot_over_hours(inventory_by_hour, day_type)
+
+
+    # inventory_lineplot_over_days(inventory_by_hour, True)
+
+    # df_list = []
+    # for day in range(1, 92):
+    #     dff = filtered_data[filtered_data['Start_Day'] == day]
+    #     trip_count = len(dff[dff['event'] == 'trip'])
+    #     rebalance_count = len(dff[dff['event'] == 'rebalance'])
+    #     service_count = len(dff[dff['event'] == 'service_start_implicit'])
+    #     df_list.append({"Day": day, "Day_type": dff['Day_type'].values[0], "trip_count": trip_count, "rebalance_count": rebalance_count, "service_count": service_count})
+    # df = pd.DataFrame(df_list)
+    # df.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'event_count_by_day.csv', encoding='utf-8', index=False, header = True, \
+    #     columns = ["Day", "Day_type", "trip_count", "rebalance_count", "service_count"])
+    # print("csv file saved") 
+    
+    # fig, ax = plt.subplots(figsize=(20, 20))
+    # sns.lineplot(x = 'Day', y = 'trip_count', data = df)
+    # plt.title('Trip count over 90 days', fontdict = {'fontsize' : 30})
+    # plt.savefig(f'../Figs/lineplot/trip_count_over_90days.png')
+    # plt.cla()
+
+    # sns.lineplot(x = 'Day', y = 'trip_count', data = df)
+    # plt.title('Rebalance count over 90 days', fontdict = {'fontsize' : 30})
+    # plt.savefig(f'../Figs/lineplot/rebalance_count_over_90days.png')
+    # plt.cla()
+
+    # sns.lineplot(x = 'Day', y = 'trip_count', data = df)
+    # plt.title('Service count over 90 days', fontdict = {'fontsize' : 30})
+    # plt.savefig(f'../Figs/lineplot/service_count_over_90days.png')
+    # plt.cla()
+
+
 
     print("Finished plotting the data.")
 
@@ -67,10 +96,6 @@ def grid_scatterplot(data, event, plot_type, unique = False, rotate = False):
     UTM_x_max = trip_data['start_UTM_x'].max() - 22000
     UTM_y_min = trip_data['start_UTM_y'].min() + 23000
     UTM_y_max = trip_data['start_UTM_y'].max() - 33000
-
-    # TODO: subject to changes
-    if rotate == True:
-        event_data['start_UTM_x'], event_data['start_UTM_y'] = utils.rotate((0,0), (event_data['start_UTM_x'], event_data['start_UTM_y']), angle = math.radians(5))
         
     if plot_type == 'hours':
         fig, ax = plt.subplots(figsize=(20, 20))
@@ -182,36 +207,36 @@ def scooter_unique_boxplot(data, event = 'trip'):
 
     sns.boxplot(x = 'Time_period', y = 'Trips', palette = 'Set1', data = avg_data)
     plt.title('Trips for each scooter over 24hrs', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/average_scooter_boxplot/scooter_count_boxplot_total.png')
+    plt.savefig(f'../Figs/boxplot/average_scooter_boxplot/scooter_count_boxplot_total.png')
     plt.cla()
 
     sns.boxplot(x = 'Time_period', y = 'Average_duration', palette = 'Set1', data = avg_data)
     plt.title('Average time for each scooter over 24hrs', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/average_scooter_boxplot/scooter_avg_duration_boxplot_total.png')
+    plt.savefig(f'../Figs/boxplot/average_scooter_boxplot/scooter_avg_duration_boxplot_total.png')
     plt.cla()
 
     sns.boxplot(x = 'Time_period', y = 'Average_line_dist', palette = 'Set1', data = avg_data)
     plt.title('Average straight line distance for each scooter over 24hrs', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/average_scooter_boxplot/scooter_avg_line_dist_boxplot_total.png')
+    plt.savefig(f'../Figs/boxplot/average_scooter_boxplot/scooter_avg_line_dist_boxplot_total.png')
     plt.cla()
 
     sns.boxplot(x = 'Time_period', y = 'Trips', hue = "Zone_number", palette = 'Set1', data = avg_data)
     plt.title('Trips for each scooter over 24hrs (by zone)', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/average_scooter_boxplot/scooter_count_boxplot_by_zone.png')
+    plt.savefig(f'../Figs/boxplot/average_scooter_boxplot/scooter_count_boxplot_by_zone.png')
     plt.cla()
 
     sns.boxplot(x = 'Time_period', y = 'Average_duration', hue = "Zone_number", palette = 'Set1', data = avg_data)
     plt.title('Average time for each scooter over 24hrs (by zone)', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/average_scooter_boxplot/scooter_avg_duration_boxplot_by_zone.png')
+    plt.savefig(f'../Figs/boxplot/average_scooter_boxplot/scooter_avg_duration_boxplot_by_zone.png')
     plt.cla()
 
     sns.boxplot(x = 'Time_period', y = 'Average_line_dist', hue = "Zone_number", palette = 'Set1', data = avg_data)
     plt.title('Average straight line distance for each scooter over 24hrs (by zone)', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/average_scooter_boxplot/scooter_avg_line_dist_boxplot_by_zone.png')
+    plt.savefig(f'../Figs/boxplot/average_scooter_boxplot/scooter_avg_line_dist_boxplot_by_zone.png')
     plt.cla()
 
 
-def trip_rebalance_boxplot_over_days(data, event, day_type):
+def trip_rebalance_boxplot_over_hours(trip_rebalance_data, event, day_type):
     
     """
     Boxplot
@@ -220,64 +245,127 @@ def trip_rebalance_boxplot_over_days(data, event, day_type):
     within zone/between zone vs. all 4*4 combinations
     """
 
-    df = data[(data['event'] == event) & (data['Day_type'] == day_type)]
+    df = trip_rebalance_data[(trip_rebalance_data['event'] == event) & (trip_rebalance_data['Day_type'] == day_type)]
     fig, ax = plt.subplots(figsize=(20, 20))
     
     sns.boxplot(x = 'Hour', y = 'count', palette = 'Set1', data = df)
     plt.title('Total '+ event + ' over ' + day_type, fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/{event}_boxplot_over_days/{event}_total_over_{day_type}.png')
+    plt.savefig(f'../Figs/boxplot/{event}_boxplot_over_24hours/{event}_total_over_{day_type}.png')
     plt.cla()
 
-    for start_zone in data['start_zone'].unique():
-        for end_zone in data['end_zone'].unique():
-            dff = df[(df['start_zone'] == start_zone) & (df['end_zone'] == end_zone)]
-            sns.boxplot(x = 'Hour', y = 'count', palette = 'Set1', data = dff)
-            plt.title(event + ' from zone ' + str(start_zone) + ' to zone '+ str(end_zone) + ' over ' + day_type, fontdict = {'fontsize' : 30})
-            plt.savefig(f'../Figs/{event}_boxplot_over_days/{event}_from_{start_zone}_to_{end_zone}_over_{day_type}.png')
+    # for start_zone in trip_rebalance_data['start_zone'].unique():
+    #     for end_zone in trip_rebalance_data['end_zone'].unique():
+    #         dff = df[(df['start_zone'] == start_zone) & (df['end_zone'] == end_zone)]
+    #         sns.boxplot(x = 'Hour', y = 'count', palette = 'Set1', data = dff)
+    #         plt.title(event + ' from zone ' + str(start_zone) + ' to zone '+ str(end_zone) + ' over ' + day_type, fontdict = {'fontsize' : 30})
+    #         plt.savefig(f'../Figs/boxplot/{event}_boxplot_over_24hours/{event}_from_{start_zone}_to_{end_zone}_over_{day_type}.png')
+    #         plt.cla()
+
+
+def trip_rebalance_lineplot_over_days(trip_rebalance_data, event, day_type):
+    
+    """
+    Boxplot
+    event: trip/take away/put back (we handle inventory separately)
+    day_type: weekday/weekend
+    within zone/between zone vs. all 4*4 combinations
+    """
+
+    df = trip_rebalance_data[trip_rebalance_data['event'] == event]
+    fig, ax = plt.subplots(figsize=(20, 20))
+    
+    sns.lineplot(x = 'Day', y = 'count', hue = 'Hour', data = df)
+    plt.title(event + ' over 90 days', fontdict = {'fontsize' : 30})
+    plt.savefig(f'../Figs/lineplot/{event}_lineplot_over_days/{event}_total_over_90days.png')
+    plt.cla()
+
+    for hour in range(0, 24):
+            df_hour = df[df['Hour'] == hour]
+            sns.lineplot(x = 'Day', y = 'count', data = df_hour)
+            plt.title(event + ' over 90 days at hour ' + str(hour), fontdict = {'fontsize' : 30})
+            plt.savefig(f'../Figs/lineplot/{event}_lineplot_over_days/{event}_total_over_90days_hour{hour}.png')
             plt.cla()
 
-    print("Boxplots saved.")
 
-
-def inventory_boxplot_over_days(inventory_data):
+def inventory_boxplot_over_hours(inventory_data, day_type):
 
     """
-    Boxplot for inventory data over 90 inventory days for weekend/weekday separately
+    Boxplot for inventory data over 24hours for weekend/weekday separately
     """
 
-    pass
+    df = inventory_data[inventory_data['Day_type'] == day_type]
+    fig, ax = plt.subplots(figsize=(20, 20))
+    
+    sns.boxplot(x = 'Hour', y = 'Inventory', palette = 'Set1', data = df)
+    plt.title('Inventory level over 24 hour on ' + day_type, fontdict = {'fontsize' : 30})
+    plt.savefig(f'../Figs/boxplot/inventory_boxplot_over_24hours/inventory_level_over_{day_type}.png')
+    plt.cla()
+
+
+def inventory_lineplot_over_days(inventory_data, drop = False):
+
+    """
+    Boxplot for inventory data over inventory days for weekend/weekday separately
+    """
+
+    # df = inventory_data[inventory_data['Day_type'] == day_type]
+    fig, ax = plt.subplots(figsize=(20, 20))
+
+    if drop == False:
+        sns.lineplot(x = 'Day', y = 'Inventory', hue = 'Hour', data = inventory_data)
+        plt.title('Inventory level over 90 days', fontdict = {'fontsize' : 30})
+        plt.savefig(f'../Figs/lineplot/inventory_lineplot_over_days/original/inventory_level_over_90days.png')
+        plt.cla()
+
+        for hour in range(0, 24):
+            df_hour = inventory_data[inventory_data['Hour'] == hour]
+            sns.lineplot(x = 'Day', y = 'Inventory', data = inventory_data)
+            plt.title('Inventory level over 90 days at hour ' + str(hour), fontdict = {'fontsize' : 30})
+            plt.savefig(f'../Figs/lineplot/inventory_lineplot_over_days/original/inventory_level_over_90days_hour{hour}.png')
+            plt.cla()
+    else:
+        df = inventory_data.drop(inventory_data[(inventory_data['Day'] == 1) | (inventory_data['Day'] == 31) | (inventory_data['Day'] == 62)].index)
+        sns.lineplot(x = 'Day', y = 'Inventory', hue = 'Hour', data = df)
+        plt.title('Inventory level over 90 days (day 1,31,62 dropped)', fontdict = {'fontsize' : 30})
+        plt.savefig(f'../Figs/lineplot/inventory_lineplot_over_days/dropped/inventory_level_over_90days_dropped.png')
+        plt.cla()
+
+        for hour in range(0, 24):
+            df_hour = df[df['Hour'] == hour]
+            sns.lineplot(x = 'Day', y = 'Inventory', data = df_hour)
+            plt.title('Inventory level over 90 days at hour ' + str(hour) + ' (day 1,31,62 dropped)', fontdict = {'fontsize' : 30})
+            plt.savefig(f'../Figs/lineplot/inventory_lineplot_over_days/dropped/inventory_level_over_90days_hour{hour}_dropped.png')
+            plt.cla()
 
 
 def count_avg(event_data):
 
     """
     Create a new dataframe that stores the information for each scooter in each period
+    Time period, Total trips, Average duration, Average straight line distance, Provider, Zone
 
-    Time period, Total trips over 90 days, Average duration, Average straight line distance, Provider, Zone
+    NOTE: 
+    This is for the average boxplot, 
+    and the trips used here are the total number of trips served in that hour
     """
 
     count_data_list = []
-    for i in range(2):
+    for i in range(24):
         df = event_data[event_data['start_time_hour'] == i]
         # scooters used in that area, for each of them compute how many trips they served
         for scooter in df['Scooter_ID'].unique():
-            total_trips = len(df[df['Scooter_ID'] == scooter])
-            # NOTE: compute number daily trips each unique scooters serves
-            # here we use the whole dataset instead of the just a specific hour
-            # since we want to count the days that scooter been deployed but has zero trip
-            days_served = len(event_data[event_data['Scooter_ID'] == scooter]['Start_Day'].unique())
-            avg_trips = total_trips / days_served 
+            trips = len(df[df['Scooter_ID'] == scooter])
             provider = df[df['Scooter_ID'] == scooter].iloc[0]['Mobility_Provider']
             zone = df[df['Scooter_ID'] == scooter].iloc[0]['start_zone']
             avg_duration = df[df['Scooter_ID'] == scooter]['duration'].mean()
             avg_line_dist = df[df['Scooter_ID'] == scooter]['line_dist'].mean()
-            scooter_event = {"Scooter_ID": scooter, "Time_period": i, "Trips": total_trips, "avg_trips": avg_trips,\
+            scooter_event = {"Scooter_ID": scooter, "Time_period": i, "Trips": trips, \
                 "Average_duration": avg_duration, "Average_line_dist": avg_line_dist,\
                     "Mobility_Provider": provider, "Zone_number": zone}
             count_data_list.append(scooter_event)
     count_data = pd.DataFrame(count_data_list)
-    count_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'scooter_count_data_test.csv', encoding='utf-8', index=False, header = True, \
-        columns = ["Scooter_ID", "Time_period", "Trips", "avg_trips", "Average_duration", "Average_line_dist", "Mobility_Provider", "Zone_number"])
+    count_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'scooter_count_data.csv', encoding='utf-8', index=False, header = True, \
+        columns = ["Scooter_ID", "Time_period", "Trips", "Average_duration", "Average_line_dist", "Mobility_Provider", "Zone_number"])
     print("File saved as scooter_count_data.csv")
     return count_data
 
