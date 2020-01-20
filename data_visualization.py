@@ -92,7 +92,7 @@ def grid_scatterplot(data, event, plot_type, unique = False, rotate = False):
 
     event_data = data[data['event'] == event]
     trip_data = data[data['event'] == 'trip']
-    UTM_x_min = trip_data['start_UTM_x'].min() + 24000
+    UTM_x_min = trip_data['start_UTM_x'].min() + 26000
     UTM_x_max = trip_data['start_UTM_x'].max() - 22000
     UTM_y_min = trip_data['start_UTM_y'].min() + 23000
     UTM_y_max = trip_data['start_UTM_y'].max() - 33000
@@ -100,18 +100,19 @@ def grid_scatterplot(data, event, plot_type, unique = False, rotate = False):
     if plot_type == 'hours':
         fig, ax = plt.subplots(figsize=(20, 20))
         for i in range(24):
+        # for i in range(1):
             df = event_data[(event_data['start_time'] >= dt.time(i,00,00)) & (event_data['start_time'] <= dt.time(i,59,59))]
-            # TODO: if unique == True:
+            # df = event_data
             df = append_dummy(df, data, UTM_x_min, UTM_x_max, UTM_y_min, UTM_y_max)
-            plt.rcParams['savefig.dpi'] = 200
-            plt.rcParams['figure.dpi'] = 200
             sns.scatterplot(x = "start_UTM_x", y = "start_UTM_y", data = df, hue = 'start_zone', style = 'Mobility_Provider', size = 100, legend = 'full')
             plt.axis([UTM_x_min, UTM_x_max, UTM_y_min, UTM_y_max], 'equal')
-            plt.xticks(np.arange(UTM_x_min, UTM_x_max, 200), rotation = 90)
-            plt.yticks(np.arange(UTM_y_min, UTM_y_max, 200))
+            plt.xticks(np.arange(UTM_x_min, UTM_x_max, 400), rotation = 90)
+            plt.yticks(np.arange(UTM_y_min, UTM_y_max, 400))
             plt.grid(linestyle = '-')
             plt.title(event + ' between hour ' + str(i) + ' and hour ' + str(i+1), fontdict = {'fontsize' : 40})
-            plt.savefig(f'../Figs/{event}_in_hour_{i}_trimmed.png', dpi = 200)
+            plt.savefig(f'../Figs/scatterplots/2d_scatterplot/{event}_in_hour_{i}_trimmed.png')
+            # plt.title(event + ' aggregated over 24 hours and 90 days', fontdict = {'fontsize' : 40})
+            # plt.savefig(f'../Figs/scatterplots/2d_scatterplot/{event}_trimmed.png')
             plt.cla()
     
     elif plot_type == 'days':
@@ -131,7 +132,7 @@ def grid_scatterplot(data, event, plot_type, unique = False, rotate = False):
                 plt.grid(linestyle = '-')
                 plt.title(event + ' between hour ' + str(8+j) + ' and hour ' + str(10+j) + ' at day ' + str(i), fontdict = {'fontsize' : 40})
                 # plt.savefig(f'../Figs/trip_plots_over_days/{event}_between_{9+j}_{10+j}_day_{i}.png', dpi = 200)
-                plt.savefig(f'../Figs/trip_between_8_10_over_days/{event}_between_{8+j}_{10+j}_day_{i}.png')
+                plt.savefig(f'../Figs/scatterplots/2d_scatterplot/trip_between_8_10_over_days/{event}_between_{8+j}_{10+j}_day_{i}.png')
                 plt.cla()
 
     else:
@@ -187,7 +188,7 @@ def grid_histogram(data, event, unique = False, rotate = False):
         # cbar = plt.colorbar()
         # cbar.ax.set_ylabel('Counts')
         plt.title(event + ' count histogram between ' + str(i) + ' and ' + str(i+1), fontdict = {'fontsize' : 40})
-        plt.savefig(f'../Figs/{event}_count_histogram_hour_{i}.png', dpi = 200)
+        plt.savefig(f'../Figs/2d_histogram/{event}_count_histogram_hour_{i}.png', dpi = 200)
         plt.cla()
 
 
@@ -207,32 +208,32 @@ def scooter_unique_boxplot(data, event = 'trip'):
 
     sns.boxplot(x = 'Time_period', y = 'Trips', palette = 'Set1', data = avg_data)
     plt.title('Trips for each scooter over 24hrs', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/boxplot/average_scooter_boxplot/scooter_count_boxplot_total.png')
+    plt.savefig(f'../Figs/boxplots/average_scooter_boxplot/scooter_count_boxplot_total.png')
     plt.cla()
 
     sns.boxplot(x = 'Time_period', y = 'Average_duration', palette = 'Set1', data = avg_data)
     plt.title('Average time for each scooter over 24hrs', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/boxplot/average_scooter_boxplot/scooter_avg_duration_boxplot_total.png')
+    plt.savefig(f'../Figs/boxplots/average_scooter_boxplot/scooter_avg_duration_boxplot_total.png')
     plt.cla()
 
     sns.boxplot(x = 'Time_period', y = 'Average_line_dist', palette = 'Set1', data = avg_data)
     plt.title('Average straight line distance for each scooter over 24hrs', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/boxplot/average_scooter_boxplot/scooter_avg_line_dist_boxplot_total.png')
+    plt.savefig(f'../Figs/boxplots/average_scooter_boxplot/scooter_avg_line_dist_boxplot_total.png')
     plt.cla()
 
     sns.boxplot(x = 'Time_period', y = 'Trips', hue = "Zone_number", palette = 'Set1', data = avg_data)
     plt.title('Trips for each scooter over 24hrs (by zone)', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/boxplot/average_scooter_boxplot/scooter_count_boxplot_by_zone.png')
+    plt.savefig(f'../Figs/boxplots/average_scooter_boxplot/scooter_count_boxplot_by_zone.png')
     plt.cla()
 
     sns.boxplot(x = 'Time_period', y = 'Average_duration', hue = "Zone_number", palette = 'Set1', data = avg_data)
     plt.title('Average time for each scooter over 24hrs (by zone)', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/boxplot/average_scooter_boxplot/scooter_avg_duration_boxplot_by_zone.png')
+    plt.savefig(f'../Figs/boxplots/average_scooter_boxplot/scooter_avg_duration_boxplot_by_zone.png')
     plt.cla()
 
     sns.boxplot(x = 'Time_period', y = 'Average_line_dist', hue = "Zone_number", palette = 'Set1', data = avg_data)
     plt.title('Average straight line distance for each scooter over 24hrs (by zone)', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/boxplot/average_scooter_boxplot/scooter_avg_line_dist_boxplot_by_zone.png')
+    plt.savefig(f'../Figs/boxplots/average_scooter_boxplot/scooter_avg_line_dist_boxplot_by_zone.png')
     plt.cla()
 
 
@@ -250,7 +251,7 @@ def trip_rebalance_boxplot_over_hours(trip_rebalance_data, event, day_type):
     
     sns.boxplot(x = 'Hour', y = 'count', palette = 'Set1', data = df)
     plt.title('Total '+ event + ' over ' + day_type, fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/boxplot/{event}_boxplot_over_24hours/{event}_total_over_{day_type}.png')
+    plt.savefig(f'../Figs/boxplots/{event}_boxplot_over_24hours/{event}_total_over_{day_type}.png')
     plt.cla()
 
     # for start_zone in trip_rebalance_data['start_zone'].unique():
@@ -271,21 +272,25 @@ def trip_rebalance_lineplot_over_days(trip_rebalance_data, event, day_type):
     within zone/between zone vs. all 4*4 combinations
     """
 
-    df = trip_rebalance_data[trip_rebalance_data['event'] == event]
+    df = trip_rebalance_data[(trip_rebalance_data['event'] == event) & (trip_rebalance_data['Day_type'] == day_type)]
     fig, ax = plt.subplots(figsize=(20, 20))
     
-    sns.lineplot(x = 'Day', y = 'count', hue = 'Hour', data = df)
-    plt.title(event + ' over 90 days', fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/lineplot/{event}_lineplot_over_days/{event}_total_over_90days.png')
-    plt.cla()
+    # sns.lineplot(x = 'Day', y = 'count', hue = 'Hour', data = df)
+    # plt.title(event + ' over 90 days', fontdict = {'fontsize' : 30})
+    # plt.savefig(f'../Figs/lineplot/{event}_lineplot_over_days/{event}_total_over_90days.png')
+    # plt.cla()
 
     for hour in range(0, 24):
             df_hour = df[df['Hour'] == hour]
             sns.lineplot(x = 'Day', y = 'count', data = df_hour)
-            plt.title(event + ' over 90 days at hour ' + str(hour), fontdict = {'fontsize' : 30})
-            plt.savefig(f'../Figs/lineplot/{event}_lineplot_over_days/{event}_total_over_90days_hour{hour}.png')
+            plt.title(event + ' over ' + day_type + ' at hour ' + str(hour), fontdict = {'fontsize' : 30})
+            plt.savefig(f'../Figs/lineplots/{event}_lineplot_over_{day_type}/{event}_total_over_{day_type}_hour{hour}.png')
             plt.cla()
 
+            sns.scatterplot(x = "Day", y = "count", data = df_hour)
+            plt.title(event + ' over ' + day_type + ' at hour ' + str(hour), fontdict = {'fontsize' : 30})
+            plt.savefig(f'../Figs/scatterplots/{event}_lineplot_over_{day_type}/{event}_total_over_{day_type}_hour{hour}.png')
+            plt.cla()
 
 def inventory_boxplot_over_hours(inventory_data, day_type):
 
@@ -298,7 +303,7 @@ def inventory_boxplot_over_hours(inventory_data, day_type):
     
     sns.boxplot(x = 'Hour', y = 'Inventory', palette = 'Set1', data = df)
     plt.title('Inventory level over 24 hour on ' + day_type, fontdict = {'fontsize' : 30})
-    plt.savefig(f'../Figs/boxplot/inventory_boxplot_over_24hours/inventory_level_over_{day_type}.png')
+    plt.savefig(f'../Figs/boxplots/inventory_boxplot_over_24hours/inventory_level_over_{day_type}.png')
     plt.cla()
 
 
@@ -314,27 +319,27 @@ def inventory_lineplot_over_days(inventory_data, drop = False):
     if drop == False:
         sns.lineplot(x = 'Day', y = 'Inventory', hue = 'Hour', data = inventory_data)
         plt.title('Inventory level over 90 days', fontdict = {'fontsize' : 30})
-        plt.savefig(f'../Figs/lineplot/inventory_lineplot_over_days/original/inventory_level_over_90days.png')
+        plt.savefig(f'../Figs/lineplots/inventory_lineplot_over_days/original/inventory_level_over_90days.png')
         plt.cla()
 
         for hour in range(0, 24):
             df_hour = inventory_data[inventory_data['Hour'] == hour]
             sns.lineplot(x = 'Day', y = 'Inventory', data = inventory_data)
             plt.title('Inventory level over 90 days at hour ' + str(hour), fontdict = {'fontsize' : 30})
-            plt.savefig(f'../Figs/lineplot/inventory_lineplot_over_days/original/inventory_level_over_90days_hour{hour}.png')
+            plt.savefig(f'../Figs/lineplots/inventory_lineplot_over_days/original/inventory_level_over_90days_hour{hour}.png')
             plt.cla()
     else:
         df = inventory_data.drop(inventory_data[(inventory_data['Day'] == 1) | (inventory_data['Day'] == 31) | (inventory_data['Day'] == 62)].index)
         sns.lineplot(x = 'Day', y = 'Inventory', hue = 'Hour', data = df)
         plt.title('Inventory level over 90 days (day 1,31,62 dropped)', fontdict = {'fontsize' : 30})
-        plt.savefig(f'../Figs/lineplot/inventory_lineplot_over_days/dropped/inventory_level_over_90days_dropped.png')
+        plt.savefig(f'../Figs/lineplots/inventory_lineplot_over_days/dropped/inventory_level_over_90days_dropped.png')
         plt.cla()
 
         for hour in range(0, 24):
             df_hour = df[df['Hour'] == hour]
             sns.lineplot(x = 'Day', y = 'Inventory', data = df_hour)
             plt.title('Inventory level over 90 days at hour ' + str(hour) + ' (day 1,31,62 dropped)', fontdict = {'fontsize' : 30})
-            plt.savefig(f'../Figs/lineplot/inventory_lineplot_over_days/dropped/inventory_level_over_90days_hour{hour}_dropped.png')
+            plt.savefig(f'../Figs/lineplots/inventory_lineplot_over_days/dropped/inventory_level_over_90days_hour{hour}_dropped.png')
             plt.cla()
 
 
