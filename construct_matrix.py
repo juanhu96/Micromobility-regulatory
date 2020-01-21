@@ -21,18 +21,33 @@ grid_size = 400
 
 def main():
     os.chdir("/Users/ArcticPirates/Desktop/Passport Project/Code")
-    filtered_data = pd.read_csv('~/Desktop/Passport Project/Data/filtered_data.csv')
-    print("Filtered dataset imported.", filtered_data.shape)
+
+    # filtered_data = pd.read_csv('~/Desktop/Passport Project/Data/filtered_data.csv')
+    # print("Filtered dataset imported.", filtered_data.shape)
 
     # NOTE: for constructing matrix, we focus on the trips that happen within these areas
-    trimmed_data = filtered_data[(filtered_data['start_UTM_x'] >= x_min) & (filtered_data['start_UTM_x'] <= x_max) &\
-         (filtered_data['start_UTM_y'] >= y_min) & (filtered_data['start_UTM_y'] <= y_max) &\
-             (filtered_data['end_UTM_x'] >= x_min) & (filtered_data['end_UTM_x'] <= x_max) &\
-                 (filtered_data['end_UTM_y'] >= y_min) & (filtered_data['end_UTM_y'] <= y_max)]
-    trimmed_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'trimmed_data.csv', encoding='utf-8', index=False, header = True)
-    print("Trimmed data obtained and saved.", trimmed_data.shape)
+
+    # trimmed_data = filtered_data[(filtered_data['start_UTM_x'] >= x_min) & (filtered_data['start_UTM_x'] <= x_max) &\
+    #      (filtered_data['start_UTM_y'] >= y_min) & (filtered_data['start_UTM_y'] <= y_max) &\
+    #          (filtered_data['end_UTM_x'] >= x_min) & (filtered_data['end_UTM_x'] <= x_max) &\
+    #              (filtered_data['end_UTM_y'] >= y_min) & (filtered_data['end_UTM_y'] <= y_max)]
+    # trimmed_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'trimmed_data.csv',\
+    #     encoding='utf-8', index=False, header = True)
+    # print("Trimmed data obtained: ", trimmed_data.shape, "Start assigning cell number and time bucket...")
+    
+    # trimmed_data = pd.read_csv('~/Desktop/Passport Project/Data/trimmed_data.csv')
     # cell_zone_matrix = create_cell_matrix(trimmed_data, x_min, x_max, y_min, y_max, grid_size)
-    # assign_feature(trimmed_data, cell_zone_matrix)
+    # np.save('cell_zone_matrix.npy', cell_zone_matrix)
+    # trimmed_cell_bucket_data = assign_feature(trimmed_data, cell_zone_matrix)
+    # trimmed_cell_bucket_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'trimmed_cell_bucket_data.csv',\
+    #     encoding='utf-8', index=False, header = True)
+    # print("Trimmed data with cell and bucket information saved as trimmed_cell_bucket_data.csv")
+    
+    trimmed_cell_bucket_data = pd.read_csv('~/Desktop/Passport Project/Data/trimmed_cell_bucket_data.csv')
+    cell_zone_matrix = np.load('cell_zone_matrix.npy')
+    trip_od_matrix(trimmed_cell_bucket_data[trimmed_cell_bucket_data['event'] == 'trip'])
+    rebalance_od_matrix(trimmed_cell_bucket_data[trimmed_cell_bucket_data['event'] == 'rebalance'])
+
 
 
 def create_cell_matrix(data, x_min, x_max, y_min, y_max, grid_size):
@@ -69,26 +84,204 @@ def create_cell_matrix(data, x_min, x_max, y_min, y_max, grid_size):
 
 
 def assign_feature(data, cell_zone_matrix):
+
     """
     Add extra columns/features which indicates:
     1. which time bucket the event is in
     2. which cell the event is in
     """
 
-    data['start_cell'], data['end_cell'] = data.apply(get_cell_number, axis=1)
-    pass
+    data['start_bucket'] = data.apply(get_start_bucket, axis=1)
+    data['end_bucket'] = data.apply(get_end_bucket, axis=1)
+    data['start_cell'] = data.apply(get_start_cell_number, axis=1)
+    data['start_cell_zone'] = data.apply(get_start_cell_zone, axis=1, args = (cell_zone_matrix, ))
+    data['end_cell'] = data.apply(get_end_cell_number, axis=1)
+    data['end_cell_zone'] = data.apply(get_end_cell_zone, axis=1, args = (cell_zone_matrix, ))
+    return data
 
-def get_cell_number(row):
+
+def trip_od_matrix(trip_data):
+
+    """
+    OD in and OD out for each time bucket
+    OD in gives infomation on where the scooter are from
+    OD out gives information on where the scooter goes to
+    E.g. (bucket 1, cell 1) --> (bucket 2, cell 2)
+    OD_out_bucket1[1][2]++
+    OD_in_bucket2[2][1]++
+    Because during bucket 1, the scooter is not at cell 2 yet
+    out[i][j]: trip from i to j
+    in[i][j]: trip to i from j
+    """
+
+    rows = 18
+    cols = 18
+    cells = rows * cols
+    # trip out
+    for day in range(1,3):
+        df_day = trip_data[trip_data['Start_Day'] == day]
+        for bucket in range(1, 4):
+            df_bucket = df_day[df_day['start_bucket'] == bucket]
+            od_matrix = [[0 for i in range(cells)] for j in range(cells)]
+            for start_cell in df_bucket['start_cell'].unique():
+                df_start_cell = df_bucket[df_bucket['start_cell'] == start_cell]
+                for end_cell in df_start_cell['end_cell'].unique():
+                    od_matrix[start_cell][end_cell] = len(df_start_cell[df_start_cell['end_cell'] == end_cell])
+            np.save(r'/Users/ArcticPirates/Desktop/Passport Project/OD_matrix/trip_out/' +\
+                'trip_out_matrix_' + 'day' + str(day) + '_' + 'bucket' + str(bucket) + '.npy', np.array(od_matrix))
+            np.savetxt(r'/Users/ArcticPirates/Desktop/Passport Project/OD_matrix/trip_out/' +\
+                'trip_out_matrix_' + 'day' + str(day) + '_' + 'bucket' + str(bucket) + '.csv', od_matrix, fmt="%d", delimiter=",")
+    print("trip out matrix finished")
+
+    # trip in
+    for day in range(1,3):
+        df_day = trip_data[trip_data['End_Day'] == day]
+        for bucket in range(1, 4):
+            df_bucket = df_day[df_day['end_bucket'] == bucket]
+            od_matrix = [[0 for i in range(cells)] for j in range(cells)]
+            for end_cell in df_bucket['end_cell'].unique():
+                df_end_cell = df_bucket[df_bucket['end_cell'] == end_cell]
+                for start_cell in df_end_cell['start_cell'].unique():
+                    od_matrix[end_cell][start_cell] = len(df_end_cell[df_end_cell['start_cell'] == start_cell])
+            np.save(r'/Users/ArcticPirates/Desktop/Passport Project/OD_matrix/trip_in/' +\
+                'trip_in_matrix_' + 'day' + str(day) + '_' + 'bucket' + str(bucket) + '.npy', np.array(od_matrix))
+            np.savetxt(r'/Users/ArcticPirates/Desktop/Passport Project/OD_matrix/trip_in/'+\
+                'trip_in_matrix_' + 'day' + str(day) + '_' + 'bucket' + str(bucket) + '.csv', od_matrix, fmt="%d", delimiter=",")
+    print("trip in matrix finished")
+
+
+def rebalance_od_matrix(rebalance_data):
+    rows = 18
+    cols = 18
+    cells = rows * cols
+
+    # rebalance out
+    for day in range(1,3):
+        df_day = rebalance_data[rebalance_data['Start_Day'] == day]
+        for bucket in range(1, 4):
+            df_bucket = df_day[df_day['start_bucket'] == bucket]
+            od_matrix = [[0 for i in range(cells)] for j in range(cells)]
+            for start_cell in df_bucket['start_cell'].unique():
+                df_start_cell = df_bucket[df_bucket['start_cell'] == start_cell]
+                for end_cell in df_start_cell['end_cell'].unique():
+                    od_matrix[start_cell][end_cell] = len(df_start_cell[df_start_cell['end_cell'] == end_cell])
+            np.save(r'/Users/ArcticPirates/Desktop/Passport Project/OD_matrix/trip_out/' +\
+                'rebalance_out_matrix_' + 'day' + str(day) + '_' + 'bucket' + str(bucket) + '.npy', np.array(od_matrix))
+
+    # rebalance in
+    for day in range(1,3):
+        df_day = rebalance_data[rebalance_data['End_Day'] == day]
+        for bucket in range(1, 4):
+            df_bucket = df_day[df_day['end_bucket'] == bucket]
+            od_matrix = [[0 for i in range(cells)] for j in range(cells)]
+            for end_cell in df_bucket['end_cell'].unique():
+                df_end_cell = df_bucket[df_bucket['end_cell'] == end_cell]
+                for start_cell in df_end_cell['start_cell'].unique():
+                    od_matrix[end_cell][start_cell] = len(df_end_cell[df_end_cell['start_cell'] == start_cell])
+            np.save(r'/Users/ArcticPirates/Desktop/Passport Project/OD_matrix/trip_in/' +\
+                'rebalance_in_matrix_' + 'day' + str(day) + '_' + 'bucket' + str(bucket) + '.npy', np.array(od_matrix))
+
+
+def inventory_table(data):
+    """
+    Compute the inventory at the start of each bucket in each grid based on the base inventory level
+    Trip from (5:50, cell 1) to (6:10, cell 2), which cell should it belong at 6:00:00?
+    """
+
+    rows = 18
+    cols = 18
+    cells = rows * cols
+
+    inventory_day_bucket_list = []
+    for day in range(1,3):
+        df_day = data[data['Start_Day'] == day]
+        day_type = df_day['Day_type'].values[0]
+        for cell in range(cells):
+            df_cell = df_day[(df_day['start_cell'] == cell) | (df_day['end_cell'] == cell)]
+            df_cell_base = df_cell[(df_cell['end_inventory_hour'] == hour) | \
+                    (((df_cell['event'] == 'trip') | (df_cell['event'] == 'low_battery')) & \
+                        (df_cell['start_time_hour'] <= 6) & (df_cell['end_time_hour'] >= 6))]
+            # inventory level at 6
+            base_inventory_level = len(df_cell_base['Scooter_ID'].unique())
+            # NOTE: need to compute the inventory level at the begining of the first bucket (i.e. 9 or 8?)
+            for bucket in range(1, 4):
+                inventory_added = len(df_cell[(df_cell['event'] == 'rebalance') & (df_cell['end_bucket'] == bucket)])
+                inventory_removed = len(df_cell[(df_cell['event'] == 'rebalance') & (df_cell['start_bucket'] == bucket)])
+                total_inventory = total_inventory + inventory_added - inventory_removed
+                inventory_day_bucket_list.append({"Day": day, "Day_type": day_type, "Bucket": bucket, "Cell": cell, "Inventory": total_inventory})
+    
+    inventory_day_bucket = pd.DataFrame(inventory_day_bucket_list)
+    inventory_day_bucket.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'inventory_day_bucket.csv', encoding='utf-8', index=False, header = True, \
+        columns = ["Day", "Day_type", "Bucket", "Cell", "Inventory"])
+    print("Inventory_day_bucket data saved.")
+
+
+def get_start_cell_number(row):
     i_start = int((row['start_UTM_y'] - y_min) / grid_size)
     j_start = int((row['start_UTM_x'] - x_min) / grid_size)
-    start_cell_number = i_start * 18 + j_start
+    return i_start * 18 + j_start
+
+   
+def get_start_cell_zone(row, cell_zone_matrix):
+    i_start = int((row['start_UTM_y'] - y_min) / grid_size)
+    j_start = int((row['start_UTM_x'] - x_min) / grid_size)
+    return cell_zone_matrix[i_start][j_start]
+
+
+def get_end_cell_number(row):
     i_end = int((row['end_UTM_y'] - y_min) / grid_size)
     j_end = int((row['end_UTM_x'] - x_min) / grid_size)
-    end_cell_number = i_end * 18 + j_end
-    return start_cell_number, end_cell_number
+    return i_end * 18 + j_end
 
-def get_bucket(row):
-    pass
+
+def get_end_cell_zone(row, cell_zone_matrix):
+    i_end = int((row['end_UTM_y'] - y_min) / grid_size)
+    j_end = int((row['end_UTM_x'] - x_min) / grid_size)
+    return cell_zone_matrix[i_end][j_end]
+
+
+def get_start_bucket(row):
+
+    """
+    NOTE: subject to changes
+    Bucket: 0, 1, 2, 3
+    0: others
+    1: 9:00:00 - 13:59:59
+    2: 14:00:00 - 18:59:59
+    3: 19:00:00 - 
+    """
+    start_time_hour = row['start_time_hour']
+    if start_time_hour >= 9 and start_time_hour < 14:
+        start_bucket = 1
+    elif start_time_hour >= 14 and start_time_hour < 19:
+        start_bucket = 2
+    elif start_time_hour >= 19 and start_time_hour < 24:
+        start_bucket = 3
+    else:
+        start_bucket = 0
+    return start_bucket
+
+
+def get_end_bucket(row):
+
+    """
+    NOTE: subject to changes
+    Bucket: 0, 1, 2, 3
+    0: others
+    1: 9:00:00 - 13:59:59
+    2: 14:00:00 - 18:59:59
+    3: 19:00:00 - 23:59:59
+    """
+    end_time_hour = row['end_time_hour']
+    if end_time_hour >= 9 and end_time_hour < 14:
+        end_bucket = 1
+    elif end_time_hour >= 14 and end_time_hour < 19:
+        end_bucket = 2
+    elif end_time_hour >= 19 and end_time_hour < 24:
+        end_bucket = 3
+    else:
+        end_bucket = 0
+    return end_bucket
 
 
 if __name__ == "__main__":
