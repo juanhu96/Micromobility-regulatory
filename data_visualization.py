@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import utils
+import construct_matrix
+from random import randint
 
 def main():
     os.chdir("/Users/ArcticPirates/Desktop/Passport Project/Code")
@@ -20,7 +22,9 @@ def main():
     trip_rebalance_total_over_days = pd.read_csv('~/Desktop/Passport Project/Data/trip_rebalance_total_over_days.csv')
     trip_rebalance_by_zone_over_days = pd.read_csv('~/Desktop/Passport Project/Data/trip_rebalance_by_zone_over_days.csv')
     inventory_by_hour = pd.read_csv('~/Desktop/Passport Project/Data/inventory_by_hour.csv')
-
+    within_between_demand_zone = pd.read_csv('~/Desktop/Passport Project/Data/within_between_demand(zone_level).csv')
+    within_between_demand_cell = pd.read_csv('~/Desktop/Passport Project/Data/within_between_demand(cell_level).csv')
+    demand_cell_aggregated = pd.read_csv('~/Desktop/Passport Project/Data/demand_cell_aggregated.csv')
     print("Dataset imported. Start plotting the data...")
 
     # scooter_unique_boxplot(filtered_data)
@@ -73,7 +77,10 @@ def main():
     # plt.savefig(f'../Figs/lineplot/service_count_over_90days.png')
     # plt.cla()
 
+    # demand_scatterplot_over_days(within_between_demand_zone)
+    # demand_scatterplot_over_days(demand_cell_aggregated, level = 'cell_aggregate')
 
+    scooter_lineplot_by_company(filtered_data)
 
     print("Finished plotting the data.")
 
@@ -341,6 +348,73 @@ def inventory_lineplot_over_days(inventory_data, drop = False):
             plt.title('Inventory level over 90 days at hour ' + str(hour) + ' (day 1,31,62 dropped)', fontdict = {'fontsize' : 30})
             plt.savefig(f'../Figs/lineplots/inventory_lineplot_over_days/dropped/inventory_level_over_90days_hour{hour}_dropped.png')
             plt.cla()
+
+
+def demand_scatterplot_over_days(demand_data, level = 'zone'):
+    df = demand_data[demand_data['Day_type'] == 'weekday']
+    fig, ax = plt.subplots(figsize=(20, 20))
+
+    if level == 'zone':
+        for zone in df['Zone'].unique():
+            for bucket in df['Time_bucket'].unique():
+                dff = df[(df['Zone'] == zone) & (df['Time_bucket'] == bucket)]
+                ax = dff.plot(kind = 'scatter', x = 'Day', y = 'within_zone_within_bucket', label = 'within_zone_within_bucket', color = 'r')    
+                dff.plot(kind = 'scatter', x = 'Day', y = 'between_zone_within_bucket', label = 'between_zone_within_bucket', color = 'g', ax = ax)    
+                dff.plot(kind = 'scatter', x = 'Day', y = 'within_zone_between_bucket', label = 'within_zone_between_bucket', color = 'b', ax = ax)
+                dff.plot(kind = 'scatter', x = 'Day', y = 'between_zone_between_bucket', label = 'between_zone_between_bucket', color = 'orange', ax = ax)
+                plt.title('Demand at zone ' + str(zone) + ' time bucket ' + str(bucket), fontdict = {'fontsize' : 10})
+                ax.set_xlabel("Day")
+                ax.set_ylabel("Count")
+                plt.savefig(f'../Figs/demand(zone_level)/zone_{zone}_bucket_{bucket}.png')
+                plt.cla()
+
+    elif level == 'cell': # 324 cells * 3 bucket
+        cells = [randint(0, 324) for p in range (10)]
+        for cell in cells:
+            zone = df[df['Cell'] == cell]['Zone'].values[0]
+            for bucket in df['Time_bucket'].unique():
+                    dff = df[(df['Cell'] == cell) & (df['Time_bucket'] == bucket)]
+                    ax = dff.plot(kind = 'scatter', x = 'Day', y = 'within_cell_within_bucket', label = 'within_cell_within_bucket', color = 'r')    
+                    dff.plot(kind = 'scatter', x = 'Day', y = 'between_cell_within_bucket', label = 'between_cell_within_bucket', color = 'g', ax = ax)    
+                    dff.plot(kind = 'scatter', x = 'Day', y = 'within_cell_between_bucket', label = 'within_cell_between_bucket', color = 'b', ax = ax)
+                    dff.plot(kind = 'scatter', x = 'Day', y = 'between_cell_between_bucket', label = 'between_cell_between_bucket', color = 'orange', ax = ax)
+                    plt.title('Demand at cell ' + str(cell) + ' (zone ' + str(zone) + ') time bucket ' + str(bucket), fontdict = {'fontsize' : 10})
+                    ax.set_xlabel("Day")
+                    ax.set_ylabel("Count")
+                    plt.savefig(f'../Figs/demand(cell_level)/cell_{cell}_bucket_{bucket}.png')
+                    plt.cla()
+    
+    # for each bucket compute the aggregated between/within ...
+    elif level == 'cell_aggregate':
+        for bucket in df['Time_bucket'].unique():
+            dff = df[df['Time_bucket'] == bucket]
+            ax = dff.plot(kind = 'scatter', x = 'Day', y = 'within_cell_within_bucket', label = 'within_cell_within_bucket', color = 'r')
+            dff.plot(kind = 'scatter', x = 'Day', y = 'between_cell_within_bucket', label = 'between_cell_within_bucket', color = 'g', ax = ax)    
+            dff.plot(kind = 'scatter', x = 'Day', y = 'within_cell_between_bucket', label = 'within_cell_between_bucket', color = 'b', ax = ax)
+            dff.plot(kind = 'scatter', x = 'Day', y = 'between_cell_between_bucket', label = 'between_cell_between_bucket', color = 'orange', ax = ax)
+            plt.title('Demand at time bucket ' + str(bucket), fontdict = {'fontsize' : 10})
+            ax.set_xlabel("Day")
+            ax.set_ylabel("Count")
+            plt.savefig(f'../Figs/demand(cell_aggregated)/bucket_{bucket}.png')
+            plt.cla()
+
+
+def scooter_lineplot_by_company(data):
+
+    """
+    Plot the amount of scooters each company deployed over 90 days
+    """
+
+    scooter_data = construct_matrix.compute_scooter_company(data[data['Day_type'] == 'weekday'])
+    fig, ax = plt.subplots(figsize=(20, 20))
+    sns.lineplot(x = 'Day', y = 'Count', data = scooter_data, hue = 'Mobility_Provider', legend = 'full')
+    plt.title("Scooters deployed over 90 days by company", fontdict = {'fontsize' : 30})
+    plt.savefig(f'../Figs/scooters_deployed_over_weekdays_by_company(lineplot).png')
+    plt.cla()
+    sns.scatterplot(x = "Day", y = "Count", data = scooter_data, hue = 'Mobility_Provider', legend = 'full')
+    plt.title("Scooters deployed over 90 days by company", fontdict = {'fontsize' : 30})
+    plt.savefig(f'../Figs/scooters_deployed_over_weekdays_by_company(scatterplot).png')
+    plt.cla()
 
 
 def count_avg(event_data):

@@ -42,13 +42,18 @@ def main():
     # trimmed_cell_bucket_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'trimmed_cell_bucket_data.csv',\
     #     encoding='utf-8', index=False, header = True)
     # print("Trimmed data with cell and bucket information saved as trimmed_cell_bucket_data.csv")
-    
-    trimmed_cell_bucket_data = pd.read_csv('~/Desktop/Passport Project/Data/trimmed_cell_bucket_data.csv')
-    cell_zone_matrix = np.load('cell_zone_matrix.npy')
-    print(trimmed_cell_bucket_data['end_inventory_day'].min() + 1, trimmed_cell_bucket_data['end_inventory_day'].max() + 1)
+
+    # trimmed_cell_bucket_data = pd.read_csv('~/Desktop/Passport Project/Data/trimmed_cell_bucket_data.csv')
+    # cell_zone_matrix = np.load('cell_zone_matrix.npy')
+    # print(trimmed_cell_bucket_data['end_inventory_day'].min() + 1, trimmed_cell_bucket_data['end_inventory_day'].max() + 1)
     # trip_od_matrix(trimmed_cell_bucket_data[trimmed_cell_bucket_data['event'] == 'trip'])
     # rebalance_od_matrix(trimmed_cell_bucket_data[trimmed_cell_bucket_data['event'] == 'rebalance'])
-    inventory_table(trimmed_cell_bucket_data)
+    # inventory_table(trimmed_cell_bucket_data)
+
+    # within_between_demand(trimmed_cell_bucket_data, level = 'cell')
+    # within_between_demand_cell = pd.read_csv('~/Desktop/Passport Project/Data/within_between_demand(cell_level).csv')
+    # compute_demand_cell_aggregated(within_between_demand_cell)
+    
 
 
 
@@ -266,6 +271,109 @@ def inventory_table(data):
     inventory_day_bucket.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'inventory_day_bucket.csv', encoding='utf-8', index=False, header = True, \
         columns = ["Inventory_day", "Day_type", "Bucket", "Cell", "Inventory"])
     print("Inventory_day_bucket data saved.")
+
+
+def within_between_demand(data, level = 'zone'):
+    """
+    Compute the within/between demand at the given level for each time bucket
+    NOTE:
+    Since we're considering demand, we consider the start zones/cells
+    level: zone, cell
+    """
+
+    within_between_demand_list = []
+
+    if level == 'zone':
+        for day in data['Start_Day'].unique():
+            df_day = data[data['Start_Day'] == day]
+            day_type = df_day['Day_type'].values[0]
+            for zone in df_day['start_zone'].unique():
+                df_zone = df_day[df_day['start_zone'] == zone]
+                for bucket in range(1, 4): # we don't care about bucket 0, 4
+                    df_bucket = df_zone[df_zone['start_bucket'] == bucket]
+
+                    within_zone_within_bucket = len(df_bucket[(df_bucket['end_zone'] == zone) & (df_bucket['end_bucket'] == bucket)])
+                    between_zone_within_bucket = len(df_bucket[(df_bucket['end_zone'] != zone) & (df_bucket['end_bucket'] == bucket)])
+                    within_zone_between_bucket = len(df_bucket[(df_bucket['end_zone'] == zone) & (df_bucket['end_bucket'] != bucket)])
+                    between_zone_between_bucket = len(df_bucket[(df_bucket['end_zone'] != zone) & (df_bucket['end_bucket'] != bucket)])
+
+                    within_between_demand_list.append({"Day": day, "Day_type": day_type, "Time_bucket": bucket, "Zone": zone, \
+                        "within_zone_within_bucket": within_zone_within_bucket, "between_zone_within_bucket": between_zone_within_bucket, \
+                            "within_zone_between_bucket": within_zone_between_bucket, "between_zone_between_bucket": between_zone_between_bucket})
+
+        within_between_demand = pd.DataFrame(within_between_demand_list)
+        within_between_demand.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'within_between_demand.csv', encoding='utf-8', index=False, header = True, \
+            columns = ["Day", "Day_type", "Time_bucket", "Zone", "within_zone_within_bucket", "between_zone_within_bucket", "within_zone_between_bucket", "between_zone_between_bucket"])
+        print("within_between_demand data for zone level saved.")
+
+    elif level == 'cell':
+        for day in data['Start_Day'].unique():
+            df_day = data[data['Start_Day'] == day]
+            day_type = df_day['Day_type'].values[0]
+            for cell in df_day['start_cell'].unique():
+                df_cell = df_day[df_day['start_cell'] == cell]
+                zone = df_cell['start_cell_zone'].values[0]
+                for bucket in range(1, 4): # we don't care about bucket 0, 4
+                    df_bucket = df_cell[df_cell['start_bucket'] == bucket]
+
+                    within_cell_within_bucket = len(df_bucket[(df_bucket['end_cell'] == cell) & (df_bucket['end_bucket'] == bucket)])
+                    between_cell_within_bucket = len(df_bucket[(df_bucket['end_cell'] != cell) & (df_bucket['end_bucket'] == bucket)])
+                    within_cell_between_bucket = len(df_bucket[(df_bucket['end_cell'] == cell) & (df_bucket['end_bucket'] != bucket)])
+                    between_cell_between_bucket = len(df_bucket[(df_bucket['end_cell'] != cell) & (df_bucket['end_bucket'] != bucket)])
+
+                    within_between_demand_list.append({"Day": day, "Day_type": day_type, "Time_bucket": bucket, "Cell": cell, "Zone": zone, \
+                        "within_cell_within_bucket": within_cell_within_bucket, "between_cell_within_bucket": between_cell_within_bucket, \
+                            "within_cell_between_bucket": within_cell_between_bucket, "between_cell_between_bucket": between_cell_between_bucket})
+
+        within_between_demand = pd.DataFrame(within_between_demand_list)
+        within_between_demand.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'within_between_demand(cell_level).csv', encoding='utf-8', index=False, header = True, \
+            columns = ["Day", "Day_type", "Time_bucket", "Cell", "Zone", "within_cell_within_bucket", "between_cell_within_bucket", "within_cell_between_bucket", "between_cell_between_bucket"])
+        print("within_between_demand data for cell level saved.")
+
+
+def compute_demand_cell_aggregated(data):
+
+    """
+    Compute the aggregated demand between/within time bucket
+    from the within_between_demand(cell_level).csv
+    """
+
+    demand_cell_aggregated_list = []
+
+    for day in data['Day'].unique():
+        df_day = data[data['Day'] == day]
+        day_type = df_day['Day_type'].values[0]
+        for bucket in range(1, 4):
+            df_bucket = df_day[df_day['Time_bucket'] == bucket]
+            within_cell_within_bucket = df_bucket['within_cell_within_bucket'].sum()
+            between_cell_within_bucket = df_bucket['between_cell_within_bucket'].sum()
+            within_cell_between_bucket = df_bucket['within_cell_between_bucket'].sum()
+            between_cell_between_bucket = df_bucket['between_cell_between_bucket'].sum()
+            demand_cell_aggregated_list.append({"Day": day, "Day_type": day_type, "Time_bucket": bucket, \
+                        "within_cell_within_bucket": within_cell_within_bucket, "between_cell_within_bucket": between_cell_within_bucket, \
+                            "within_cell_between_bucket": within_cell_between_bucket, "between_cell_between_bucket": between_cell_between_bucket})
+    
+    demand_cell_aggregated = pd.DataFrame(demand_cell_aggregated_list)
+    demand_cell_aggregated.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'demand_cell_aggregated.csv', encoding='utf-8', index=False, header = True, \
+            columns = ["Day", "Day_type", "Time_bucket", "within_cell_within_bucket", "between_cell_within_bucket", "within_cell_between_bucket", "between_cell_between_bucket"])
+
+
+def compute_scooter_company(data):
+
+    """
+    Compute the number of scooters each company deployed over 90 days
+    """
+
+    scooter_company_list = []
+    for day in data['Start_Day'].unique():
+        df_day = data[data['Start_Day'] == day]
+        for company in df_day['Mobility_Provider'].unique():
+            scooter_company_list.append({"Day": day, "Mobility_Provider": company, "Count": len(df_day[df_day['Mobility_Provider'] == company]['Scooter_ID'].unique())})
+    scooter_company = pd.DataFrame(scooter_company_list)
+    # scooter_company.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'scooter_company.csv', encoding='utf-8', index=False, header = True, \
+    #     columns = ["Day", "Mobility_Provider", "Count"])
+    return scooter_company
+
 
 
 def get_start_cell_number(row):
