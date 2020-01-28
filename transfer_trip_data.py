@@ -32,10 +32,10 @@ def main():
     # filtered_data = filter_data(filter_data(converted_data, 'trip'), 'rebalance', min_dist = -1) # set -1: keep scooters that pick and drop at same place
     # filtered_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'filtered_data.csv', encoding='utf-8', index=False, header = True)
 
-    filtered_data = pd.read_csv('~/Desktop/Passport Project/Data/filtered_data.csv')
+    # filtered_data = pd.read_csv('~/Desktop/Passport Project/Data/filtered_data.csv')
     # compute_inventory(filtered_data)
     # compute_trip_rebalance(filtered_data)
-    compute_scooter_stat(filtered_data[filtered_data['event'] == 'trip'])
+    # compute_scooter_stat(filtered_data[filtered_data['event'] == 'trip'])
 
 
 def preprocess(scooter_data):
