@@ -28,15 +28,20 @@ def main():
 
     # FILTER
     # converted_data = pd.read_csv('~/Desktop/Passport Project/Data/converted_data.csv')
-    # filtered_data = filter_data(converted_data, 'trip')
-    # filtered_data = filter_data(filter_data(converted_data, 'trip'), 'rebalance', min_dist = -1) # set -1: keep scooters that pick and drop at same place
-    # filtered_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'filtered_data.csv', encoding='utf-8', index=False, header = True)
+    # print(converted_data.shape)
+    # filtered_data_one = filter_data(converted_data, 'trip')
+    # print(filtered_data_one.shape)
+    # filtered_data = filter_data(filtered_data_one, 'rebalance', min_dist = -1, max_time = 10000) # set -1: keep scooters that pick and drop at same place
+    # print(filtered_data.shape)
+    # filtered_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'filtered_data_new.csv', encoding='utf-8', index=False, header = True)
 
     # filtered_data = pd.read_csv('~/Desktop/Passport Project/Data/filtered_data.csv')
     # compute_inventory(filtered_data)
     # compute_trip_rebalance(filtered_data)
     # compute_scooter_stat(filtered_data[filtered_data['event'] == 'trip'])
-
+    
+    trimmed_cell_bucket_data = pd.read_csv('~/Desktop/Passport Project/Data/trimmed_cell_bucket_data.csv')
+    compute_scooter_utilization_stat(trimmed_cell_bucket_data)
 
 def preprocess(scooter_data):
 
@@ -182,7 +187,7 @@ def convert_data(scooter_data):
     print("File saved as converted_data.csv")
 
 
-def filter_data(data, event, min_time = 1, min_dist = 0):
+def filter_data(data, event, min_time = 1, min_dist = 0, max_time = 400):
     
     """
     Filter the data by dropping events by specification
@@ -192,9 +197,15 @@ def filter_data(data, event, min_time = 1, min_dist = 0):
     NOTE: 
     Do we have to drop the ones that are too large?
     What if the scooters are returned at the exact same place?
+
+    maximum speed 15mph = 402 meters/min
     """
 
-    filtered_data = data.drop(data[(data['event'] == event) & ((data['duration'] < min_time) | (data['line_dist'] < min_dist))].index)
+    df = data.drop(data[(data['event'] == event) & ((data['duration'] < min_time) | (data['line_dist'] < min_dist))].index)
+    dff = df.drop(df[(df['event'] == event) & (df['duration'] > max_time)].index)
+    dfff = dff.drop(dff[(dff['event'] == event) & ((dff['duration'] > 90) & (dff['line_dist'] == 0))].index)
+    filtered_data = dfff.drop(dfff[(dfff['event'] == event) & (dfff['line_dist']/dfff['duration'] > 400)].index)
+
     print("Data of event type: " + event + " have been filtered.")
     return filtered_data
 
@@ -379,6 +390,79 @@ def compute_scooter_stat(event_data):
     daily_trip_stat.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'daily_trip_stat.csv', encoding='utf-8', index=False, header = True, \
         columns = ["Hour", "trip_mean", "trip_median", "trip_quantile_10", "trip_quantile_20", "trip_quantile_80", "trip_quantile_90", "avg_duration", "avg_line_dist"])
     print("File saved as daily_trip_stat.csv")
+
+
+def compute_scooter_utilization_stat(data):
+
+    """
+    Compute the utilization of scooter per zone per time bucket
+    """
+
+    event_data = data[(data['event'] == 'trip') & (data['Day_type'] == 'weekday')]
+    scooter_count_list = []
+    for zone in range(1, 4):
+        df_zone = event_data[event_data['start_zone'] == zone]
+        for bucket in range(1, 4):
+            df_bucket = df_zone[df_zone['start_bucket'] == bucket]
+            # scooters used in that area, for each of them compute how many trips they served
+            for scooter in df_bucket['Scooter_ID'].unique():
+                df_scooter = df_bucket[df_bucket['Scooter_ID'] == scooter]
+                total_trips = len(df_scooter)
+                # NOTE: compute number daily trips each unique scooters serves
+                # here we use the whole dataset instead of the just a specific hour
+                # since we want to count the days that scooter been deployed but has zero trip
+                days_served = len(event_data[event_data['Scooter_ID'] == scooter]['Start_Day'].unique())
+                daily_avg_trips = total_trips / days_served
+                provider = df_scooter['Mobility_Provider'].values[0]
+                avg_duration = df_scooter['duration'].mean()
+                avg_line_dist = df_scooter['line_dist'].mean()
+
+                scooter_event = {"Scooter_ID": scooter, "Time_bucket": bucket, "Zone": zone, "total_trips": total_trips, \
+                    "days_served": days_served, "daily_avg_trips": daily_avg_trips, \
+                        "Average_duration": avg_duration, "Average_line_dist": avg_line_dist,\
+                            "Mobility_Provider": provider}
+                scooter_count_list.append(scooter_event)
+
+        scooter_count = pd.DataFrame(scooter_count_list)
+        # scooter_count.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'scooter_count.csv', encoding='utf-8', index=False, header = True, \
+        #     columns = ["Scooter_ID", "Time_bucket", "Zone", "total_trips", "days_served", "daily_avg_trips", "Average_duration", "Average_line_dist", "Mobility_Provider"])
+        # print("File saved as scooter_count.csv")
+
+
+    # statistics at hourly level (using the data above)
+    daily_trip_stat_list = []
+
+    for zone in range(1, 4):
+        df_zone = scooter_count[scooter_count['Zone'] == zone]
+        for bucket in range(1, 4):
+            df_bucket = df_zone[df_zone['Time_bucket'] == bucket]
+            
+            avg_duration = df_bucket['Average_duration'].mean()
+            avg_line_distance = df_bucket['Average_line_dist'].mean()
+            trips = df_bucket['daily_avg_trips']
+
+            daily_trip_stat_list.append({"Bucket": bucket, "Zone": zone, "trip_mean": round(trips.mean(),3), "trip_median": round(trips.mean(),3),\
+                "trip_quantile_10": round(trips.quantile(0.1),3), "trip_quantile_20": round(trips.quantile(0.2),3),\
+                    "trip_quantile_80": round(trips.quantile(0.8),3), "trip_quantile_90": round(trips.quantile(0.9),3),\
+                    "avg_duration": round(avg_duration,3), "avg_line_dist": round(avg_line_distance,3)})
+    
+    daily_trip_stat = pd.DataFrame(daily_trip_stat_list)
+    daily_trip_stat.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'daily_trip_stat.csv', encoding='utf-8', index=False, header = True, \
+        columns = ["Bucket", "Zone", "trip_mean", "trip_median", "trip_quantile_10", "trip_quantile_20", "trip_quantile_80", "trip_quantile_90", "avg_duration", "avg_line_dist"])
+    print("File saved as daily_trip_stat.csv")
+
+
+    # daily_trip_list = []
+    # for day in range(2, 4):
+    #     df_day = df[df['Start_Day'] == day]
+    #     for hour in range(0, 24):
+    #         df_hour = df_day[df_day['start_time_hour'] == hour]
+    #         daily_trip_list.append({"Day": day, "Hour": hour, "Trip_Count": df_hour.shape[0],"Scooter_Count": len(df_hour['Scooter_ID'].unique())})
+    
+    # daily_trip = pd.DataFrame(daily_trip_list)
+    # daily_trip.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'trip_scooter_count_test.csv', encoding='utf-8', index=False, header = True, \
+    #     columns = ["Day", "Hour", "Trip_Count","Scooter_Count"])
+
 
 
 if __name__ == "__main__":

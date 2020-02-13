@@ -25,63 +25,10 @@ def main():
     within_between_demand_zone = pd.read_csv('~/Desktop/Passport Project/Data/within_between_demand(zone_level).csv')
     within_between_demand_cell = pd.read_csv('~/Desktop/Passport Project/Data/within_between_demand(cell_level).csv')
     demand_cell_aggregated = pd.read_csv('~/Desktop/Passport Project/Data/demand_cell_aggregated.csv')
+    trimmed_cell_bucket_data = pd.read_csv('~/Desktop/Passport Project/Data/trimmed_cell_bucket_data.csv')
+
     print("Dataset imported. Start plotting the data...")
-
-    # scooter_unique_boxplot(filtered_data)
-    # grid_scatterplot(filtered_data, event = 'trip', plot_type = 'hours')
-    # grid_scatterplot(filtered_data, event = 'trip', plot_type = 'days')
-    # grid_scatterplot(filtered_data, event = 'rebalance', plot_type = 'hours')
-
-    # for event_type in filtered_data['event'].unique():
-    #     grid_histogram(filtered_data, event = event_type)
-
-    # event_data = filtered_data[filtered_data['event'] == 'trip']
-    # avg_data = count_avg(event_data)
-
-    # for event in trip_rebalance_total_over_days['event'].unique():
-    #     for day_type in trip_rebalance_total_over_days['Day_type'].unique():
-    #         trip_rebalance_boxplot_over_hours(trip_rebalance_total_over_days, event, day_type)
-    #         trip_rebalance_lineplot_over_days(trip_rebalance_total_over_days, event, day_type)
-
-    # for day_type in inventory_by_hour['Day_type'].unique():
-    #     inventory_boxplot_over_hours(inventory_by_hour, day_type)
-
-
-    # inventory_lineplot_over_days(inventory_by_hour, True)
-
-    # df_list = []
-    # for day in range(1, 92):
-    #     dff = filtered_data[filtered_data['Start_Day'] == day]
-    #     trip_count = len(dff[dff['event'] == 'trip'])
-    #     rebalance_count = len(dff[dff['event'] == 'rebalance'])
-    #     service_count = len(dff[dff['event'] == 'service_start_implicit'])
-    #     df_list.append({"Day": day, "Day_type": dff['Day_type'].values[0], "trip_count": trip_count, "rebalance_count": rebalance_count, "service_count": service_count})
-    # df = pd.DataFrame(df_list)
-    # df.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'event_count_by_day.csv', encoding='utf-8', index=False, header = True, \
-    #     columns = ["Day", "Day_type", "trip_count", "rebalance_count", "service_count"])
-    # print("csv file saved") 
-    
-    # fig, ax = plt.subplots(figsize=(20, 20))
-    # sns.lineplot(x = 'Day', y = 'trip_count', data = df)
-    # plt.title('Trip count over 90 days', fontdict = {'fontsize' : 30})
-    # plt.savefig(f'../Figs/lineplot/trip_count_over_90days.png')
-    # plt.cla()
-
-    # sns.lineplot(x = 'Day', y = 'trip_count', data = df)
-    # plt.title('Rebalance count over 90 days', fontdict = {'fontsize' : 30})
-    # plt.savefig(f'../Figs/lineplot/rebalance_count_over_90days.png')
-    # plt.cla()
-
-    # sns.lineplot(x = 'Day', y = 'trip_count', data = df)
-    # plt.title('Service count over 90 days', fontdict = {'fontsize' : 30})
-    # plt.savefig(f'../Figs/lineplot/service_count_over_90days.png')
-    # plt.cla()
-
-    # demand_scatterplot_over_days(within_between_demand_zone)
-    # demand_scatterplot_over_days(demand_cell_aggregated, level = 'cell_aggregate')
-
-    scooter_lineplot_by_company(filtered_data)
-
+    duration_dist_histogram(trimmed_cell_bucket_data)
     print("Finished plotting the data.")
 
 
@@ -149,10 +96,9 @@ def grid_scatterplot(data, event, plot_type, unique = False, rotate = False):
 def grid_histogram(data, event, unique = False, rotate = False):
 
     """
-    2D histogram of counts of trips/scooter with grids
+    2D histogram of counts of trips/scooter with grids (DOES NOT count the unique scooters)
     
     event: 'trip' or 'rebalance'
-    TODO: unique: 'True' or 'False', whether to count unique scooters or all trips
     rotate: 'True' or 'False', whether to rotate the coordinates for plot, set to 'False' as default
     """
 
@@ -176,7 +122,6 @@ def grid_histogram(data, event, unique = False, rotate = False):
         NOTE:
         H is a ndarray of shape(nx, ny), we transpose it to let 
         each row list bins with common y range
-        TODO: count the unique scooters in each grids (how to compute this without manually for loop)
 
         Another way is to use pcolormesh to display actual edges
         X, Y = np.meshgrid(x_edges, y_edges)
@@ -200,6 +145,7 @@ def grid_histogram(data, event, unique = False, rotate = False):
 
 
 def scooter_unique_boxplot(data, event = 'trip'):
+
     """
     Boxplot for the average time/distance of the event group by the time
     NOTE: For first time handling dataset, call count_avg() for data transformation
@@ -247,7 +193,8 @@ def scooter_unique_boxplot(data, event = 'trip'):
 def trip_rebalance_boxplot_over_hours(trip_rebalance_data, event, day_type):
     
     """
-    Boxplot
+    Boxplot of the number of trip/rebanacing events over 24 hours 
+    (each hour has 90 points, corresponding to 90 days)
     event: trip/take away/put back (we handle inventory separately)
     day_type: weekday/weekend
     within zone/between zone vs. all 4*4 combinations
@@ -273,7 +220,8 @@ def trip_rebalance_boxplot_over_hours(trip_rebalance_data, event, day_type):
 def trip_rebalance_lineplot_over_days(trip_rebalance_data, event, day_type):
     
     """
-    Boxplot
+    Lineplot of total trip/rebalance events over 90 days 
+    (each day is aggregated and has one point)
     event: trip/take away/put back (we handle inventory separately)
     day_type: weekday/weekend
     within zone/between zone vs. all 4*4 combinations
@@ -299,6 +247,7 @@ def trip_rebalance_lineplot_over_days(trip_rebalance_data, event, day_type):
             plt.savefig(f'../Figs/scatterplots/{event}_lineplot_over_{day_type}/{event}_total_over_{day_type}_hour{hour}.png')
             plt.cla()
 
+
 def inventory_boxplot_over_hours(inventory_data, day_type):
 
     """
@@ -314,10 +263,34 @@ def inventory_boxplot_over_hours(inventory_data, day_type):
     plt.cla()
 
 
+def duration_dist_histogram(data):
+    
+    """
+    Histogram and boxplot of duration/distance of each trips
+    Per zone/time bucket
+    """
+
+    df = data[(data['event'] == 'trip') & (data['Day_type'] == 'weekday')]
+    fig, ax = plt.subplots(figsize=(20, 20))
+
+    for zone in range(1, 4):
+        df_zone = data[data['start_zone'] == zone]
+        for bucket in range(1, 4):
+            df_bucket = df_zone[df_zone['start_bucket'] == bucket]
+            sns.distplot(df_bucket['duration'], bins=30, hist_kws={"range": [0,100]}, kde = False, norm_hist = False)
+            plt.title('Histogram of trip duration at zone ' + str(zone) + ' and time bucket ' + str(bucket), fontdict = {'fontsize' : 20})
+            plt.savefig(f'../Figs/histogram/duration/duration_histogram_zone{zone}_bucket{bucket}.png')
+            plt.cla()
+            sns.distplot(df_bucket['line_dist'], bins=30, kde = False, norm_hist = False)
+            plt.title('Histogram of trip distance at zone ' + str(zone) + ' and time bucket ' + str(bucket), fontdict = {'fontsize' : 20})
+            plt.savefig(f'../Figs/histogram/distance/distance_histogram_zone{zone}_bucket{bucket}.png')
+            plt.cla()
+    
+
 def inventory_lineplot_over_days(inventory_data, drop = False):
 
     """
-    Boxplot for inventory data over inventory days for weekend/weekday separately
+    Lineplot for inventory data over all inventory days for weekend/weekday separately
     """
 
     # df = inventory_data[inventory_data['Day_type'] == day_type]
@@ -351,6 +324,11 @@ def inventory_lineplot_over_days(inventory_data, drop = False):
 
 
 def demand_scatterplot_over_days(demand_data, level = 'zone'):
+
+    """
+    Plot the number of trips happen between/within zone + between/within bucket for all these zones and buckets
+    """
+
     df = demand_data[demand_data['Day_type'] == 'weekday']
     fig, ax = plt.subplots(figsize=(20, 20))
 
@@ -453,7 +431,6 @@ def append_dummy(selected_data, whole_data, UTM_x_min, UTM_x_max, UTM_y_min, UTM
 
     """
     Add 3 x 4 dummy data points to correct the legend (tentative solution)
-    TODO: add to the boundary instead of the central
     """
     
     dummy_list = []
