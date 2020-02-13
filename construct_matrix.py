@@ -21,40 +21,7 @@ grid_size = 400
 
 def main():
     os.chdir("/Users/ArcticPirates/Desktop/Passport Project/Code")
-
-    # filtered_data = pd.read_csv('~/Desktop/Passport Project/Data/filtered_data.csv')
-    # print("Filtered dataset imported.", filtered_data.shape)
-
-    # NOTE: for constructing matrix, we focus on the trips that happen within these areas
-
-    # trimmed_data = filtered_data[(filtered_data['start_UTM_x'] >= x_min) & (filtered_data['start_UTM_x'] <= x_max) &\
-    #      (filtered_data['start_UTM_y'] >= y_min) & (filtered_data['start_UTM_y'] <= y_max) &\
-    #          (filtered_data['end_UTM_x'] >= x_min) & (filtered_data['end_UTM_x'] <= x_max) &\
-    #              (filtered_data['end_UTM_y'] >= y_min) & (filtered_data['end_UTM_y'] <= y_max)]
-    # trimmed_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'trimmed_data.csv',\
-    #     encoding='utf-8', index=False, header = True)
-    # print("Trimmed data obtained: ", trimmed_data.shape, "Start assigning cell number and time bucket...")
     
-    # trimmed_data = pd.read_csv('~/Desktop/Passport Project/Data/trimmed_data.csv')
-    # cell_zone_matrix = create_cell_matrix(trimmed_data, x_min, x_max, y_min, y_max, grid_size)
-    # np.save('cell_zone_matrix.npy', cell_zone_matrix)
-    # trimmed_cell_bucket_data = assign_feature(trimmed_data, cell_zone_matrix)
-    # trimmed_cell_bucket_data.to_csv(r'/Users/ArcticPirates/Desktop/Passport Project/Data/'+'trimmed_cell_bucket_data.csv',\
-    #     encoding='utf-8', index=False, header = True)
-    # print("Trimmed data with cell and bucket information saved as trimmed_cell_bucket_data.csv")
-
-    # trimmed_cell_bucket_data = pd.read_csv('~/Desktop/Passport Project/Data/trimmed_cell_bucket_data.csv')
-    # cell_zone_matrix = np.load('cell_zone_matrix.npy')
-    # print(trimmed_cell_bucket_data['end_inventory_day'].min() + 1, trimmed_cell_bucket_data['end_inventory_day'].max() + 1)
-    # trip_od_matrix(trimmed_cell_bucket_data[trimmed_cell_bucket_data['event'] == 'trip'])
-    # rebalance_od_matrix(trimmed_cell_bucket_data[trimmed_cell_bucket_data['event'] == 'rebalance'])
-    # inventory_table(trimmed_cell_bucket_data)
-
-    # within_between_demand(trimmed_cell_bucket_data, level = 'cell')
-    # within_between_demand_cell = pd.read_csv('~/Desktop/Passport Project/Data/within_between_demand(cell_level).csv')
-    # compute_demand_cell_aggregated(within_between_demand_cell)
-    
-
 
 
 def create_cell_matrix(data, x_min, x_max, y_min, y_max, grid_size):
